@@ -1,0 +1,26 @@
+{
+"158d0001231615":"motion-kitchen",
+"158d000170fab0":"temphumidity-cabinet",
+"158d0001a33878":"magnet-window-cabinet",
+"158d000183f424":"switch-double-9473",
+"158d000170fb42":"temphumidity-childroom",
+"158d0001a33844":"magnet-window-childroom",
+"158d00019dbd84":"temphumidity-bedroom",
+"158d000170ba10":"temphumidity-hall2",
+"158d00015c82de":"magnet-hall2",
+"158d0001a33928":"magnet-bedroom",
+"158d00016d0868":"temphumidity-kitchen",
+"158d0001a33846":"magnet-kitchen",
+"158d0001824850":"temphumidity-livingroom",
+"158d0001a34894":"magnet-a-livingroom",
+"158d0001a3380c":"magnet-b-livingroom",
+"158d000170ba1a":"temphumidity-hall",
+"158d00019dc2e1":"temphumidity-toilet",
+"158d00019dc157":"temphumidity-bathroom",
+"158d0001720d07":"temphumidity-outdoors",
+"158d0001de8d40":"magnet-door-toilet",
+"34ce0088e76c":"gateway-primary",
+"gateways": {
+	"34ce0088e76c":""
+    }
+}
