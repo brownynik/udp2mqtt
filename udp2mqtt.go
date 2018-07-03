@@ -148,18 +148,20 @@ func sendMQTTMessage(channel chan string, ) {
 
 	    fmt.Println("Translate data for sensor", sensorName)
 
-
+	    
+	    
 	    // check for gateway
+	    /*
 	    if (payload["model"]!=nil)&&(payload["model"].(string) == "gateway") {
 
 		// create gateways interface
-		if cfgGateways == nil {
-		    
+		if cfg.lstGateways == nil {
+		    // future functionality...
 		
 		}
 
 	    }
-
+	    */
 
 	    if publish := mqttClient.Publish(*cfg.mqttTopic, byte(*cfg.mqttQos), false, msg); publish.Wait() && publish.Error() != nil {
 		fmt.Println(publish.Error())
@@ -174,6 +176,22 @@ func sendMQTTMessage(channel chan string, ) {
 
 
 func main() {
+
+
+/*
+    opts := mqtt.NewClientOptions().AddBroker("tcp://192.168.1.10:1883").SetClientID("mqtt-proxy")
+    opts.SetKeepAlive(2 * time.Second)
+    opts.SetUsername("esp8266")
+    opts.SetPassword("rP09-x27mB3g")
+    opts.SetCleanSession(true)
+
+    mqttClient := mqtt.NewClient(opts)
+    if token := mqttClient.Connect(); token.Wait() && token.Error() != nil {
+	panic(token.Error())
+    }
+*/
+
+
 	conn, err := net.ListenMulticastUDP("udp", nil, &net.UDPAddr{IP: net.IPv4(224, 0, 0, 50), Port: 9898})
 	checkError(err)
 	defer conn.Close()
