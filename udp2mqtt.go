@@ -140,10 +140,12 @@ type Config struct {
     mqttURI    		*string
     mqttClientId	*string
     mqttTopic  		*string
+    mqttSubscribeTopic	*string
     mqttQos    		*int
     mqttUser   		*string
     mqttPass   		*string
     mqttCleanSession	*bool
+
 
     cfgFilename		*string
     lstSensors		map[string]interface{}
@@ -156,10 +158,74 @@ var lstDevices = new(XiaomiList)
 
 var mqttClient mqtt.Client
 
+var udpchannel chan string
+
+func sendUDPMessage(channel chan string, ) {
+
+    for msg := range channel {  // Magic Go - read from endless list
+	
+	 fmt.Println("To UDO Msg = ", msg)
+
+	
+	// формируем UDP message
+
+
+	var payload map[string]interface{}
+	if err := json.Unmarshal([]byte(msg), &payload); err != nil {
+	    continue
+	}
+
+
+	if (payload["cmd"]!= nil) && (payload["cmd"].(string) == "write") &&
+	    (payload["model"]!= nil) && (payload["model"] == "gateway") &&
+	    (payload["sid"]!=nil) {
+	    
+
+	    fmt.Println("DEBUG To UDO Msg = ", msg)
+
+	}
+
+	
+
+	
+    }
+
+}
+
+
+
+
+var mqttRecvHandler mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
+
+// var mqttRecvHandler mqtt.MessageHandler = func(client *mqtt.Client, msg mqtt.Message) {
+
+   //////fmt.Printf("MSG: %s\n", msg.Payload())
+    //udpchannel := make(chan string, 1024)
+    //defer close(udpchannel)
+    //go sendUDPMessage(udpchannel)
+
+
+    //channel <- string(buffer[0:n])
+    udpchannel <- string(msg.Payload())
+
+
+
+
+
+
+   //text:= fmt.Sprintf("this is result msg #%d!", knt)
+   //knt++
+   //token := client.Publish("nn/result", 0, false, text)
+   //token.Wait()
+}
+
+
 func init() {
     cfg.mqttURI = flag.String("broker", "tcp://192.168.1.10:1883", "The broker URI. ex: tcp://192.168.1.10:1883")
     cfg.mqttClientId = flag.String("id", "mqtt-proxy", "The ClientID (optional)")
     cfg.mqttTopic = flag.String("topic", "stat/xiaomi", "The topic name to/from which to publish/subscribe")
+    cfg.mqttSubscribeTopic = flag.String("subscribe", "cmd/xiaomi", "The topic name to subscribe")
+
     cfg.mqttQos = flag.Int("qos", 0, "The Quality of Service 0,1,2 (default 0)")
     cfg.mqttUser = flag.String("user", "", "The User (optional)")
     cfg.mqttPass = flag.String("password", "", "The password (optional)")
@@ -274,6 +340,11 @@ func init() {
     }
 
 
+    if token := mqttClient.Subscribe(*cfg.mqttSubscribeTopic, 0, mqttRecvHandler); token.Wait() && token.Error() != nil {
+    // if token := mqttClient.Subscribe(*cfg.mqttSubscribeTopic, 0, nil); token.Wait() && token.Error() != nil {
+        fmt.Println(token.Error())
+    }
+
 }
 
 
@@ -348,6 +419,7 @@ func sendMQTTMessage(channel chan string, ) {
 		
 	    }
 	    
+	    // fmt.Println("gateway data = ", devIPAddress)
 
 	} else
 	{
@@ -412,11 +484,110 @@ func sendMQTTMessage(channel chan string, ) {
 	}
 
 
+	/*
+	if (cfg.lstSensors == nil)||((payload["sid"]!=nil) && (cfg.lstSensors[payload["sid"].(string)]!=nil)) {
+	    
+	    sensorName := "noname"
+	    if (cfg.lstSensors!= nil) {
+		sensorName = cfg.lstSensors[payload["sid"].(string)].(string)
+	    }
+
+	
+
+	
+	fmt.Println("Translate data for sensor", sensorName)
+
+
+	for e := lstDevices.Front(); e != nil; e = e.Next() {
+	//fmt.Println(e.Value.(*XiaomiDevice).Name)
+	//fmt.Println(e.Value.(*tSensor).Voltage)
+	//fmt.Println(e.Value.Name)
+	//fmt.Println(e.Value.XiaomiDevice.(*XiaomiDevice).Name)
+	fmt.Printf("SID = %s, Name = %s\n\r", e.Value.(xiaomiDeviceIntf).GetSID(), e.Value.(xiaomiDeviceIntf).GetName())
+	}
+
+
+	    
+
+	    if publish := mqttClient.Publish(*cfg.mqttTopic, byte(*cfg.mqttQos), false, msg); publish.Wait() && publish.Error() != nil {
+		fmt.Println(publish.Error())
+	    }
+	    
+	    // fmt.Println("Msg = ", msg)
+
+	}
+
+	*/
+
   }
 }
 
 
 func main() {
+
+
+    //var sens tSensor
+    //sens.Voltage = 3
+    //sens.Name = "SensorName"
+    // fmt.Println("sens.Name = ", sens.Name)
+
+    //var l = list.New()
+    //var l = new(XiaomiList)
+    
+    //var l = new(XiaomiList)
+    //l.Init()
+
+
+    //l.PushBack(&tSensor{Name: "Sensor A"})
+    //l.PushBack(&tSensor{Name: "Sensor B"})
+    //l.PushBack(&tSensor{Name: "Sensor C"})
+
+    //l.PushBack(&tSensor{Voltage: 1, XiaomiDevice: XiaomiDevice{Name: "Name A", SID: "111"}})
+    //l.PushBack(&tSensor{Voltage: 2, XiaomiDevice: XiaomiDevice{Name: "Name B", SID: "222"}})
+    //l.PushBack(&tSensor{Voltage: 3, XiaomiDevice: XiaomiDevice{Name: "Name C", SID: "333"}})
+    //l.PushBack(&tSensor{Voltage: 4, XiaomiDevice: XiaomiDevice{Name: "Name D", SID: "444"}})
+    //l.PushBack(&tGateway{Token: "TokenValue1", XiaomiDevice: XiaomiDevice{Name: "Gateway A", SID: "555"}})
+    //l.PushBack(&tGateway{Token: "TokenValue2", XiaomiDevice: XiaomiDevice{Name: "Gateway B", SID: "666"}})
+
+
+    //l.PushBack(sens)
+
+
+    
+/*
+    for e := lstDevices.Front(); e != nil; e = e.Next() {
+	//fmt.Println(e.Value.(*XiaomiDevice).Name)
+	//fmt.Println(e.Value.(*tSensor).Voltage)
+	//fmt.Println(e.Value.Name)
+	//fmt.Println(e.Value.XiaomiDevice.(*XiaomiDevice).Name)
+	fmt.Printf("SID = %s, Name = %s\n\r", e.Value.(xiaomiDeviceIntf).GetSID(), e.Value.(xiaomiDeviceIntf).GetName())
+
+    }
+    
+
+    
+    // var d = DeviceBySID(l, "555")
+    /*
+    var d = lstDevices.DeviceBySID("158d0001de8d40")
+    if d!= nil {
+	fmt.Println(d.Value.(xiaomiDeviceIntf).GetName())
+    }
+    */
+
+
+/*
+    opts := mqtt.NewClientOptions().AddBroker("tcp://192.168.1.10:1883").SetClientID("mqtt-proxy")
+    opts.SetKeepAlive(2 * time.Second)
+    opts.SetUsername("esp8266")
+    opts.SetPassword("rP09-x27mB3g")
+    opts.SetCleanSession(true)
+
+    mqttClient := mqtt.NewClient(opts)
+    if token := mqttClient.Connect(); token.Wait() && token.Error() != nil {
+	panic(token.Error())
+    }
+*/
+
 
 	conn, err := net.ListenMulticastUDP("udp", nil, &net.UDPAddr{IP: net.IPv4(224, 0, 0, 50), Port: 9898})
 	checkError(err)
@@ -429,6 +600,9 @@ func main() {
 
 	go sendMQTTMessage(channel)
 
+	udpchannel = make(chan string, 1024)
+	defer close(udpchannel)
+	go sendUDPMessage(udpchannel)
 
 	for {
 		n,_, err := conn.ReadFromUDP(buffer)
@@ -443,6 +617,9 @@ func main() {
 
 
 	}
+
+    
+    // mqttClient.Unsubscribe(*cfg.mqttSubscribeTopic)
 
     mqttClient.Disconnect(250)
     time.Sleep(1 * time.Second)
