@@ -164,11 +164,7 @@ func sendUDPMessage(channel chan string, ) {
 
     for msg := range channel {  // Magic Go - read from endless list
 	
-	 fmt.Println("To UDO Msg = ", msg)
-
-	
 	// формируем UDP message
-
 
 	var payload map[string]interface{}
 	if err := json.Unmarshal([]byte(msg), &payload); err != nil {
@@ -178,15 +174,30 @@ func sendUDPMessage(channel chan string, ) {
 
 	if (payload["cmd"]!= nil) && (payload["cmd"].(string) == "write") &&
 	    (payload["model"]!= nil) && (payload["model"] == "gateway") &&
-	    (payload["sid"]!=nil) {
+	    (payload["sid"]!=nil) && (strings.Contains(msg, "%AUTO_SECURE_KEY%")) {
 	    
+
+	    
+	    var itm *list.Element
+	    itm = lstDevices.DeviceBySID(payload["sid"].(string))
+	    if itm!=nil {
+
+		if itm.Value.(xiaomiDeviceIntf).GetModel() == payload["model"].(string) {
+		    
+		    msg = strings.Replace(msg, "%AUTO_SECURE_KEY%", itm.Value.(*tGateway).GetSecureKey(), 1)
+		    
+		}
+
+	    }
+
 
 	    fmt.Println("DEBUG To UDO Msg = ", msg)
 
 	}
 
-	
-
+	// send msg to udp broadcast
+	socket, _ := net.DialUDP("udp4", nil, &net.UDPAddr{IP:net.IPv4(224,0,0,50),Port:9898,})
+	socket.Write([]byte(msg))
 	
     }
 
@@ -374,10 +385,7 @@ func sendMQTTMessage(channel chan string, ) {
 	    continue
 	}
 
-	
-	var devName string
-	devSID:= payload["sid"].(string)
-	devModel:= payload["model"].(string)
+
 	currentTime:= time.Now()
 	var dev_cmd string = ""
 	_ = dev_cmd
@@ -386,6 +394,20 @@ func sendMQTTMessage(channel chan string, ) {
 	    dev_cmd = payload["cmd"].(string)
 	}
 
+	if (dev_cmd == "read")||(dev_cmd == "read_ask") {
+	    continue
+	}
+
+	if (payload["model"] == nil)||(payload["sid"] == nil) {
+	    continue
+	}
+		
+
+	var devName string
+	devSID:= payload["sid"].(string)
+	devModel:= payload["model"].(string)
+
+	//fmt.Println("2MODEL = ", devModel)
 
 	var devToken string = ""
 	var devIPAddress string= ""
@@ -394,6 +416,8 @@ func sendMQTTMessage(channel chan string, ) {
 	_ = devToken
 	_ = devIPAddress
 	_ = devVoltage
+
+	//fmt.Println("3MODEL = ", devModel)
 
 	if devModel == "gateway" {
 	    
