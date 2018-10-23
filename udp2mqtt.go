@@ -19,6 +19,7 @@ import (
 Options:
  [-help]                      Display help
  [-q 0|1|2]                   Quality of Service
+ [-rt]			      Retained flag
  [-clean]                     CleanSession (true if -clean is present)
  [-id <clientid>]             CliendID
  [-user <user>]               User
@@ -26,6 +27,7 @@ Options:
  [-broker <uri>]              Broker URI
  [-topic <topic>]             Topic
  [-cfgfile <filename>]        Filename with filter of sensors and other options
+ [-loglevel 0|1]	      Loglevel: 0 - no logged, 1 - log for magnet sensor messages
 */
 
 var magicKey = []byte{ 0x17, 0x99, 0x6d, 0x09, 0x3d, 0x28, 0xdd, 0xb3, 0xba, 0x69, 0x5a, 0x2e, 0x6f, 0x58, 0x56, 0x2e }
@@ -145,9 +147,11 @@ type Config struct {
     mqttUser   		*string
     mqttPass   		*string
     mqttCleanSession	*bool
+    mqttRetained	*bool
 
 
     cfgFilename		*string
+    logLevel		*int
     lstSensors		map[string]interface{}
     lstGateways		map[string]interface{}
 }
@@ -241,7 +245,9 @@ func init() {
     cfg.mqttUser = flag.String("user", "", "The User (optional)")
     cfg.mqttPass = flag.String("password", "", "The password (optional)")
     cfg.mqttCleanSession = flag.Bool("clean", false, "Set Clean Session (default false)")
+    cfg.mqttRetained = flag.Bool("rt",false,"Set retained flag (default false)")
     cfg.cfgFilename = flag.String("cfgfile", "./devicelist.json", "The configuration file name (filter by SID and other...)")
+    cfg.logLevel = flag.Int("loglevel", 0, "The Log Level: 0 - no logged, 1 - log for magnet sensors messages (default 0)")
     flag.Parse()
 
 
@@ -254,6 +260,8 @@ func init() {
     fmt.Printf("\ttopic:     %s\n", *cfg.mqttTopic)
     fmt.Printf("\tqos:       %d\n", *cfg.mqttQos)
     fmt.Printf("\tcleansess: %v\n", *cfg.mqttCleanSession)
+    fmt.Printf("\tretained:  %d\n", *cfg.mqttRetained)
+    fmt.Printf("\tloglevel:  %d\n", *cfg.logLevel)
 */
 
     cfg.lstSensors = nil
@@ -374,7 +382,7 @@ func sendMQTTMessage(channel chan string, ) {
 
 	
 	// сразу и без промедления отправляем MQTT сообщение
-	if publish := mqttClient.Publish(*cfg.mqttTopic, byte(*cfg.mqttQos), false, msg); publish.Wait() && publish.Error() != nil {
+	if publish := mqttClient.Publish(*cfg.mqttTopic, byte(*cfg.mqttQos), bool(*cfg.mqttRetained), msg); publish.Wait() && publish.Error() != nil {
 		fmt.Println(publish.Error())
 	}
 
@@ -459,8 +467,11 @@ func sendMQTTMessage(channel chan string, ) {
 	itm = lstDevices.DeviceBySID(devSID)
 	if itm!= nil {
 	    
-	    if itm.Value.(xiaomiDeviceIntf).GetName() == "" {
-		itm.Value.(xiaomiDeviceIntf).SetName("Unknown" + strings.Title(devModel) + devSID)
+	    devName = itm.Value.(xiaomiDeviceIntf).GetName()
+	    // if itm.Value.(xiaomiDeviceIntf).GetName() == "" {
+	    if devName == "" {
+		devName = "Unknown" + strings.Title(devModel) + devSID
+		itm.Value.(xiaomiDeviceIntf).SetName(devName)
 	    }
 
 	    if itm.Value.(xiaomiDeviceIntf).GetModel() == "" {
@@ -478,8 +489,10 @@ func sendMQTTMessage(channel chan string, ) {
 		if devToken!="" && itm.Value.(*tGateway).Password!="" {
 
 		    var sKey = itm.Value.(*tGateway).RecalcSecureKey(devToken)
+                    if (int(*cfg.logLevel) > 1) {
 
 		    fmt.Printf("SID = %s, IPAddress = %s, Token = %s, SecureKey = %s\n\r", devSID, devIPAddress, devToken, sKey)
+                    }
 
 
 		}
@@ -506,7 +519,21 @@ func sendMQTTMessage(channel chan string, ) {
 		lstDevices.PushBack(&tSensor{Voltage: devVoltage, XiaomiDevice: XiaomiDevice{Name: devName, SID: devSID, Model: devModel, LastTime: currentTime}})
 	    }
 	}
+	// логируем сообщение от сенсора
+	if (int(*cfg.logLevel) > 0) {
 
+	    //devVoltage
+	    //devName
+	    //devSID
+	    //devModel
+	    //currentTime
+
+
+	    if (devModel=="magnet")||(devModel=="sensor_magnet.aq2") {
+		
+		fmt.Printf("%s:%s:%s:%s:%s\n\r", currentTime.Format("2006-01-02 15:04:05"),devName,devModel,devSID,msg)
+	    }
+	}
 
 	/*
 	if (cfg.lstSensors == nil)||((payload["sid"]!=nil) && (cfg.lstSensors[payload["sid"].(string)]!=nil)) {
